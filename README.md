@@ -30,17 +30,7 @@ WiFi Router	1	Provide network to connect ESP32 and phone
 Smartphone or Laptop	1	To send messages through MQTT client or phone App
 
 🔹 Block Diagram:
-less
-Copy
-Edit
-[ Smart Phone / Laptop ]
-          |
-          | (WiFi/MQTT messages)
-          ▼
-[ Router (WiFi) ]
-          |
-          ▼
-[ ESP32 ] — (GPIO control) — [ Relay Module ] — [ Light/Fan ]
+
 
 🔹 Working Principle:
 ➥ The ESP32 connects to your home's WiFi network.
