@@ -1,0 +1,114 @@
+#include <WiFi.h>         // To connect ESP32 to a WiFi network
+#include <PubSubClient.h> // To connect and communicate with MQTT broker
+
+// ----------------------------------------------------------------------------
+// 1️⃣. Define your credentials and MQTT broker details
+// ----------------------------------------------------------------------------
+
+// Your WiFi network credentials
+const char* ssid = "your-SSID";
+const char* password = "your-PASSWORD";
+
+// Your MQTT broker's IP or hostname
+const char* mqtt_server = "your-broker-ip";
+
+// ----------------------------------------------------------------------------
+// 2️⃣. Initialize the WiFi and PubSubClient
+// ----------------------------------------------------------------------------
+
+// Create a WiFiClient to handle the network connection
+WiFiClient espClient;
+
+// PubSubClient handles the communication with the MQTT broker
+PubSubClient client(espClient);
+
+// ----------------------------------------------------------------------------
+// 3️⃣. Define GPIO for the relay (control output)
+// ----------------------------------------------------------------------------
+
+// GPIO 2 is connected to RELAY1
+#define RELAY1 2
+
+// ----------------------------------------------------------------------------
+// 4️⃣. Callback function:
+// ----------------------------------------------------------------------------
+// This function executes when a new message arrives on a subscribed topic.
+// ----------------------------------------------------------------------------
+void callback(char* topic, byte* message, unsigned int length) {
+  Serial.print("Message from ");
+  Serial.print(topic);
+  Serial.print(": ");
+  Serial.write(message, length);
+  Serial.println();
+
+  // If the message came from the "home/relay1" topic...
+  if (strcmp(topic, "home/relay1") == 0) {
+    if (message[0] == '1') {  // If first character is '1'
+      digitalWrite(RELAY1, HIGH);  // Turn ON the relay
+    } else {  // Otherwise
+      digitalWrite(RELAY1, LOW);  // Turn OFF the relay
+    }
+  }
+}
+
+// ----------------------------------------------------------------------------
+// 5️⃣. Reconnection function:
+// ----------------------------------------------------------------------------
+// If the ESP32 drops its MQTT connection, this attempts to reconnect.
+// ----------------------------------------------------------------------------
+void reconnect()
+{
+  // Loop until we reconnect
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Attempt to connect with client ID "ESPClient"
+    if (client.connect("ESPClient")) {
+      Serial.println("connected.");
+      // Once connected, subscribe to the control topic
+      client.subscribe("home/relay1");
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state()); // Prints the failure code
+      Serial.println(" retry in 5 seconds.");
+      delay(5000);
+    }
+  }
+}
+
+// ----------------------------------------------------------------------------
+// 6️⃣. Setup:
+// ----------------------------------------------------------------------------
+void setup()
+{
+  Serial.begin(115200);
+  
+  // Set relay GPIO as output
+  pinMode(RELAY1, OUTPUT);
+  digitalWrite(RELAY1, LOW); // Turn it off by default
+
+  // Begin Wifi Connection
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi");
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print('.');
+  }
+  Serial.println("WiFi connected.");
+
+  // Set MQTT broker and callback
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+}
+
+// ----------------------------------------------------------------------------
+// 7️⃣. Main Loop:
+// ----------------------------------------------------------------------------
+void loop()
+{
+  // If disconnected, reconnect first
+  if (!client.connected()) reconnect();
+
+  // Handle incoming messages and maintain connection
+  client.loop();
+}
